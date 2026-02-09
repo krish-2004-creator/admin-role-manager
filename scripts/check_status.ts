@@ -1,8 +1,6 @@
-
+import 'dotenv/config';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
 
 async function main() {
     console.log('Checking user status...');

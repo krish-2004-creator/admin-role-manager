@@ -1,10 +1,8 @@
-
+import 'dotenv/config';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
 
 async function main() {
     const email = 'newuser@test.com';
