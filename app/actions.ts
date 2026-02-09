@@ -51,7 +51,7 @@ export async function register(prevState: string | undefined, formData: FormData
             role: 'user', // Default role
             status: 'pending', // Default status
         });
-    } catch (error) {
+    } catch {
         return 'Failed to register user';
     }
     // redirect or just return success message to let client handle redirect
