@@ -1,7 +1,8 @@
 
 'use server';
 
-import { signIn, auth } from '@/auth';
+import { signIn, signOut, auth } from '@/auth';
+
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -70,4 +71,20 @@ export async function approveUser(userId: number) {
 
 export async function getUsers() {
     return await db.select().from(users).orderBy(users.createdAt);
+}
+
+export async function rejectUser(userId: number) {
+    const session = await auth();
+    if (session?.user?.role !== 'admin') {
+        throw new Error('Unauthorized');
+    }
+    // update status
+    await db.update(users)
+        .set({ status: 'rejected' })
+        .where(eq(users.id, userId));
+    revalidatePath('/dashboard');
+}
+
+export async function handleSignOut() {
+    await signOut();
 }

@@ -1,7 +1,7 @@
 
-import { auth, signOut } from '@/auth';
+import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { getUsers, approveUser } from '@/app/actions';
+import { getUsers, approveUser, rejectUser, handleSignOut } from '@/app/actions';
 
 export default async function DashboardPage() {
     const session = await auth();
@@ -28,18 +28,15 @@ export default async function DashboardPage() {
                                 <span className="text-sm font-semibold text-gray-800">
                                     {user.name || 'User'}
                                 </span>
-                                <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                    {user.role}
+                                <span className={`text-xs uppercase tracking-wide px-2 py-0.5 rounded font-bold ${user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                                    {user.role} MODE
                                 </span>
                             </div>
                             <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
                                 {(user.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
                             </div>
                             <form
-                                action={async () => {
-                                    'use server';
-                                    await signOut();
-                                }}
+                                action={handleSignOut}
                             >
                                 <button className="text-sm text-gray-500 hover:text-red-600 transition-colors font-medium">
                                     Sign Out
@@ -146,9 +143,12 @@ export default async function DashboardPage() {
                     <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
                         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
                             <h2 className="text-xl font-bold text-gray-800">User Management</h2>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col items-end gap-1">
                                 <span className="bg-gray-100 text-gray-600 py-1 px-3 rounded text-xs font-semibold uppercase tracking-wide">
                                     {(await getUsers()).length} Total Users
+                                </span>
+                                <span className="text-[10px] text-gray-400 italic">
+                                    Actions available for Pending users
                                 </span>
                             </div>
                         </div>
@@ -159,6 +159,7 @@ export default async function DashboardPage() {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -188,22 +189,32 @@ export default async function DashboardPage() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span
                                                     className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${u.status === 'approved'
-                                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                                            : u.status === 'pending'
-                                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                : 'bg-red-50 text-red-700 border-red-200'
+                                                        ? 'bg-green-50 text-green-700 border-green-200'
+                                                        : u.status === 'pending'
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                            : 'bg-red-50 text-red-700 border-red-200'
                                                         }`}
                                                 >
                                                     {u.status}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 {u.status === 'pending' && (
-                                                    <form action={approveUser.bind(null, u.id)}>
-                                                        <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-4 rounded-md shadow-sm text-xs uppercase tracking-wide transition-colors">
-                                                            Approve
-                                                        </button>
-                                                    </form>
+                                                    <div className="flex justify-end">
+                                                        <form action={approveUser.bind(null, u.id)}>
+                                                            <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-4 rounded-md shadow-sm text-xs uppercase tracking-wide transition-colors">
+                                                                Approve
+                                                            </button>
+                                                        </form>
+                                                        <form action={rejectUser.bind(null, u.id)}>
+                                                            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-md shadow-sm text-xs uppercase tracking-wide transition-colors ml-2">
+                                                                Reject
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                 )}
                                                 {u.status !== 'pending' && <span className="text-gray-400 text-xs italic">No actions</span>}
                                             </td>
@@ -213,8 +224,9 @@ export default async function DashboardPage() {
                             </table>
                         </div>
                     </div>
-                )}
-            </main>
-        </div>
+                )
+                }
+            </main >
+        </div >
     );
 }
