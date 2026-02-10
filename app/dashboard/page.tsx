@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getUsers, approveUser, rejectUser, handleSignOut } from '@/app/actions';
 
 export const dynamic = 'force-dynamic';
@@ -19,10 +20,13 @@ export default async function DashboardPage() {
             <nav className="bg-white shadow-sm border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                        <div className="flex items-center gap-8">
+                            <Link href="/dashboard" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-80 transition-opacity">
                                 Dashboard
-                            </span>
+                            </Link>
+                            <Link href="/dashboard/study-notes" className="text-sm font-medium text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-100 hover:bg-purple-100">
+                                <span>🧠</span> AI Study Notes
+                            </Link>
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="flex flex-col items-end">
