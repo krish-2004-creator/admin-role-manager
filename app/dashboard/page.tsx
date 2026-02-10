@@ -1,7 +1,8 @@
-
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getUsers, approveUser, rejectUser, handleSignOut } from '@/app/actions';
+
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
     const session = await auth();
