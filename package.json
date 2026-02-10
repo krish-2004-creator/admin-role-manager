@@ -13,7 +13,7 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
-    "next": "15.1.7",
+    "next": "^15.2.0-canary.19",
     "next-auth": "5.0.0-beta.25",
     "react": "19.2.3",
     "react-dom": "19.2.3"
@@ -27,8 +27,11 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.9",
     "eslint": "^9",
-    "eslint-config-next": "15.1.7",
+    "eslint-config-next": "^15.2.0-canary.19",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": "15.2.0-canary.19"
   }
 }
