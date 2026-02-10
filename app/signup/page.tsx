@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { register } from '@/app/actions';
 import Link from 'next/link';
 
@@ -19,7 +20,7 @@ function SubmitButton() {
 }
 
 export default function SignupPage() {
-    const [errorMessage, dispatch] = useFormState(register, undefined);
+    const [errorMessage, dispatch] = useActionState(register, undefined);
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">

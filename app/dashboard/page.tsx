@@ -56,6 +56,7 @@ export default async function DashboardPage() {
                         Hello, {user.name || 'there'}!
                     </h1>
                     <p className="mt-1 text-gray-500">Here is what is happening with your account today.</p>
+
                 </div>
 
                 {/* Status Messages */}
