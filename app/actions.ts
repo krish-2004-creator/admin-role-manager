@@ -4,8 +4,8 @@
 import { signIn, signOut, auth } from '@/auth';
 
 import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, studyNotes } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { AuthError } from 'next-auth';
@@ -57,34 +57,68 @@ export async function register(prevState: string | undefined, formData: FormData
     // redirect or just return success message to let client handle redirect
     return 'success';
 }
-export async function approveUser(userId: number) {
-    const session = await auth();
-    if (session?.user?.role !== 'admin') {
-        throw new Error('Unauthorized');
+export async function approveUser(userId: number, formData: FormData) {
+    try {
+        const session = await auth();
+        if (session?.user?.role !== 'admin') {
+            throw new Error('Unauthorized');
+        }
+        // update status
+        await db.update(users)
+            .set({ status: 'approved' })
+            .where(eq(users.id, userId));
+        revalidatePath('/dashboard');
+    } catch (error) {
+        console.error('ApproveUser error:', error);
+        throw error;
     }
-    // update status
-    await db.update(users)
-        .set({ status: 'approved' })
-        .where(eq(users.id, userId));
-    revalidatePath('/dashboard');
 }
 
 export async function getUsers() {
     return await db.select().from(users).orderBy(users.createdAt);
 }
 
-export async function rejectUser(userId: number) {
-    const session = await auth();
-    if (session?.user?.role !== 'admin') {
-        throw new Error('Unauthorized');
+export async function rejectUser(userId: number, formData: FormData) {
+    try {
+        const session = await auth();
+        if (session?.user?.role !== 'admin') {
+            throw new Error('Unauthorized');
+        }
+        // update status
+        await db.update(users)
+            .set({ status: 'rejected' })
+            .where(eq(users.id, userId));
+        revalidatePath('/dashboard');
+    } catch (error) {
+        console.error('RejectUser error:', error);
+        throw error;
     }
-    // update status
-    await db.update(users)
-        .set({ status: 'rejected' })
-        .where(eq(users.id, userId));
-    revalidatePath('/dashboard');
 }
 
 export async function handleSignOut() {
-    await signOut();
+    try {
+        await signOut({ redirectTo: '/login' });
+    } catch (error) {
+        if ((error as Error).message === 'NEXT_REDIRECT') {
+            throw error;
+        }
+        console.error('SignOut error:', error);
+        throw error;
+    }
+}
+
+
+export async function getStudyNotes(userId: number) {
+    const notes = await db.select().from(studyNotes).where(eq(studyNotes.userId, userId)).orderBy(studyNotes.createdAt);
+    return notes;
+}
+
+export async function deleteStudyNote(noteId: number, userId: number) {
+    await db.delete(studyNotes).where(
+        and(
+            eq(studyNotes.id, noteId),
+            eq(studyNotes.userId, userId)
+        )
+    );
+    revalidatePath('/dashboard/study-notes');
 }

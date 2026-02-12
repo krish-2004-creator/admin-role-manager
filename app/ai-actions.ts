@@ -1,71 +1,104 @@
-
 'use server';
 
-import { YoutubeTranscript } from 'youtube-transcript';
+import { auth } from '@/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '@/db';
+import { studyNotes } from '@/db/schema';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function generateStudyNotes(videoUrl: string) {
+    const session = await auth();
+    const userId = session?.user?.id ? parseInt(session.user.id) : undefined;
+
     if (!process.env.GEMINI_API_KEY) {
         return { error: 'Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file.' };
     }
 
+    // Extract Video ID
+    const videoId = extractVideoId(videoUrl);
+    if (!videoId) {
+        return { error: 'Invalid YouTube URL' };
+    }
+
     try {
-        console.log(`Generating study notes for: ${videoUrl}`);
+        console.log(`🎬 Generating study notes for video: ${videoId}`);
 
-        // 1. Extract Video ID
-        const videoId = extractVideoId(videoUrl);
-        if (!videoId) {
-            return { error: 'Invalid YouTube URL' };
-        }
-
-        // 2. Fetch Transcript
-        console.log(`Fetching transcript for video ID: ${videoId}`);
-        const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
-
-        if (!transcriptItems || transcriptItems.length === 0) {
-            return { error: 'No transcript found for this video. Please try a video with closed captions.' };
-        }
-
-        const fullTranscript = transcriptItems.map(item => item.text).join(' ');
-
-        // Truncate if too long (Gemini has a token limit, though 1.5 Flash is generous)
-        // A rough char limit to be safe
-        const maxLength = 30000;
-        const truncatedTranscript = fullTranscript.length > maxLength
-            ? fullTranscript.substring(0, maxLength) + '...[truncated]'
-            : fullTranscript;
-
-        console.log(`Transcript length: ${truncatedTranscript.length} characters`);
-
-        // 3. Generate Summary with Gemini
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Use Gemini 1.5 Flash which supports video analysis
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
-        You are an expert student assistant. Your task is to create comprehensive study notes from the following YouTube video transcript.
+        You are an expert educational content analyst. Analyze this YouTube video and create comprehensive, structured study notes.
+
+        **STRICT INSTRUCTIONS:**
+        1.  **Do NOT** simply summarize or recap the video.
+        2.  **ANALYZE** the content deeply to extract core educational value.
+        3.  **Do NOT** use timestamp format.
+        4.  Focus on concepts, insights, and actionable knowledge.
         
-        Format the output in clean Markdown:
-        - Use H1 (#) for the main title (create a catchy title based on content).
-        - Use H2 (##) for section headers.
-        - Use bullet points for key concepts.
-        - Highlight important terms in **bold**.
-        - Include a "Summary" section at the top.
-        - Include a "Key Takeaways" section at the bottom.
+        **Required Output Structure:**
+        # [Engaging Title]
         
-        Transcript:
-        "${truncatedTranscript}"
+        ## 🎯 Executive Summary
+        A concise, high-level overview of the main thesis (2-3 sentences).
+        
+        ## 🔑 Key Concepts & Definitions
+        *   **Concept 1**: Definition/Explanation
+        *   **Concept 2**: Definition/Explanation
+        *   (Continue as needed)
+        
+        ## 🧠 Detailed Analysis
+        Break down the video's content into logical sections. Use clear headings (###). 
+        Provide deep analysis, not just surface-level descriptions.
+        Include examples, explanations, and context.
+        
+        ## 💡 Key Insights
+        *   Important realizations or "aha moments" from the content
+        
+        ## 🚀 Actionable Takeaways
+        *   Practical steps or applications derived from the video
+        *   What can viewers implement immediately?
+        
+        ## 📚 Additional Resources (if mentioned)
+        *   Any tools, books, or resources referenced in the video
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        console.log('🤖 Calling Gemini API with video URL...');
 
-        return { success: true, notes: text };
+        // Gemini can analyze YouTube videos directly via URL
+        // Pass the URL in the prompt - Gemini will automatically detect and process it
+        const result = await model.generateContent([
+            {
+                text: `${prompt}\n\nVideo URL: ${videoUrl}`
+            }
+        ]);
+
+        console.log('📥 Received response from Gemini');
+        const generatedText = result.response.text();
+        console.log('✅ Generated text length:', generatedText.length);
+
+        // Extract title from generated content
+        const titleMatch = generatedText.match(/^#\s+(.*)$/m);
+        const title = titleMatch ? titleMatch[1] : `Study Notes: ${videoId}`;
+
+        // Save to database
+        if (userId) {
+            await db.insert(studyNotes).values({
+                userId,
+                videoUrl,
+                videoId,
+                title,
+                content: generatedText,
+            });
+            console.log('💾 Notes saved to database');
+        }
+
+        return { success: true, notes: generatedText };
 
     } catch (error) {
-        console.error('Error generating study notes:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('❌ Error generating study notes:', error);
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
         return { error: `Failed to generate notes: ${errorMessage}` };
     }
 }
